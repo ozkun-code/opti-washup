@@ -127,7 +127,7 @@ public function plusItem($key)
     $this->form->discount = $this->discount;
 
     $this->form->store();
-
+    
     return redirect()->route('transaksi.index');
 }
 

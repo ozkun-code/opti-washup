@@ -2,13 +2,13 @@
 
 namespace App\Charts;
 
-use marineusde\LarapexCharts\Charts\LineChart AS OriginalLineChart;
+use marineusde\LarapexCharts\Charts\AreaChart AS OriginalAreaChart;
 use Carbon\Carbon;
 use App\Models\Transaksi; // Assuming Transaksi model stores sales data
 
 class DailyIncome
 {
-    public function build(): OriginalLineChart
+    public function build(): OriginalAreaChart
     {
         $currentMonth = Carbon::now()->month;
         $currentYear = Carbon::now()->year;
@@ -35,14 +35,19 @@ class DailyIncome
         $daysLabels = array_map(function ($day) {
             return $day + 1;
         }, range(0, $daysInMonth - 1));
-
+        
       
 
-        return (new OriginalLineChart)
+        return (new OriginalAreaChart)
+
             ->setTitle('Grafik Penjualan  ' . Carbon::now()->format('F Y'))
-            
-            ->addData('Sales', $dailySales)
-            ->setXAxis($daysLabels);
+        ->addData('Income', $dailySales)
+        ->setHeight(400)
+        ->setXAxis($daysLabels)
+        ->setGrid( '#3F51B5')
+        ->setFontFamily('Montserrat Alternates')
+        ->setColors(['#0069ff', '#303F9F'])
+        ->setMarkers(['#3b4c68'], 7, 10);
             
             
     }

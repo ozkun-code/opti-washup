@@ -11,7 +11,7 @@
             <thead>
                 <th>Resi</th>
                 <th>Tanggal</th>
-                <th>Keterangan</th>
+
                 <th>Customer</th>
                 <th>Price</th>
                 <th class="text-center">Status</th>
@@ -27,7 +27,7 @@
                         <td>{{ $transaksi->id }}</td>
                         <td>{{ $transaksi->created_at->format('d M H:i') }}</td>
 
-                        <td>{{ $transaksi->description }}</td>
+
                         <td>{{ $transaksi->customer->name }}</td>
                         <td>{{ Number::format($transaksi->price) }}</td>
                         <td class="text-center">{{ $transaksi->status }}</td>

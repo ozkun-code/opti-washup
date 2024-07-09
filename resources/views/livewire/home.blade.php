@@ -29,14 +29,31 @@
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body d-flex flex-column">
-            <div class="flex-grow-1">
-                {{ $chart->container() }}
+    <div class="grid grid-cols-3 gap-10 mt-12">
+        <div class="card col-span-2 " style="max-width: 720px; max-height: 450px;">
+
+            <div class="card-body" s>
+                {!! $chart->container() !!}
+            </div>
+        </div>
+
+        <div class="card col-span-1" style="max-width: 720px; max-height: 450px;">
+            <!-- Perhatikan penambahan col-span-1 di sini -->
+            <div class="card-body">
+                <h3 class="text-xl font-semibold mb-4 text-center">Top 5 Service Terlaris</h3>
+                <div class="grid grid-cols-1 gap-4">
+                    @foreach ($topItems as $product => $item)
+                        <div class="bg-white rounded-lg overflow-hidden shadow-md p-4">
+                            <div class="flex items-center space-x-2">
+                                <div class="text-sm font-semibold">{{ $loop->iteration }}.</div>
+                                <div class="flex-1 text-center text-sm font-semibold">{{ $product }}</div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
             </div>
         </div>
     </div>
-
 </div>
 
 <script src="{{ $chart->cdn() }}"></script>

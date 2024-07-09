@@ -13,6 +13,7 @@
 
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+ 
 </head>
 
 <body class="bg bg-base-200 min-h-screen">
@@ -36,7 +37,9 @@
             {{ $slot }}
         </div>
     @endguest
+  
     @stack('scripts')
+    @stack('js')
 
 
 </body>
