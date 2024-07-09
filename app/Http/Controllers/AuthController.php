@@ -2,114 +2,146 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\TokenAbility;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RefreshTokenRequest;
+use App\Http\Requests\RegisterRequest;
 use App\Models\User;
-use App\Models\PersonalAccessToken;
-use App\Models\Customer;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Redis;
-
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
-{
-    $data = $request->validate([
-        'name' => 'required|string',
-        'email' => 'required|email|unique:users,email',
-        'password' => 'required|string|min:6',
-        'contact' => 'required', // Pastikan Anda juga menerima informasi kontak dari request
-    ]);
-
-    // Membuat pengguna
-    $user = User::create([
-        'name' => $data['name'],
-        'email' => $data['email'],
-        'password' => Hash::make($data['password']),
-        'role' => 'customer', // Asumsikan setiap pengguna baru adalah pelanggan
-    ]);
-
-    // Membuat entri pelanggan
-    Customer::create([
-        'name' => $data['name'],
-        'contact' => $data['contact'],
-        'user_id' => $user->id,
-    ]);
-
-    // Kirim pesan WhatsApp atau email sebagai notifikasi pendaftaran, jika diperlukan
-    // ...
-
-    return ['message' => 'Registrasi Anda berhasil.'];
-}
-    public function login(Request $request)
+    /**
+     * User registration
+     */
+    public function register(RegisterRequest $request): JsonResponse
     {
-        try {
-            $credentials = $request->validate([
-                'email' => 'required|email',
-                'password' => 'required',
+        $userData = $request->validated();
+
+        $userData['email_verified_at'] = now();
+        $user = User::create($userData);
+
+        $response = Http::post(env('APP_URL') . '/oauth/token', [
+            'grant_type' => 'password',
+            'client_id' => env('PASSPORT_PASSWORD_CLIENT_ID'),
+            'client_secret' => env('PASSPORT_PASSWORD_SECRET'),
+            'username' => $userData['email'],
+            'password' => $userData['password'],
+            'scope' => '',
+        ]);
+
+        $user['token'] = $response->json();
+
+        return response()->json([
+            'success' => true,
+            'statusCode' => 201,
+            'message' => 'User has been registered successfully.',
+            'data' => $user,
+        ], 201);
+    }
+
+    /**
+     * Login user
+     */
+    public function login(LoginRequest $request): JsonResponse
+    {
+        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            $user = Auth::user();
+            // $parameters = [
+            //     'grant_type' => 'password',
+            //     'client_id' => env('PASSPORT_PASSWORD_GRANT_CLIENT_ID'),
+            //     'client_secret' => env('PASSPORT_PASSWORD_GRANT_CLIENT_SECRET'),
+            //     'username' => $request->email,
+            //     'password' => $request->password,
+            //     'scope' => '',
+            // ];
+            
+            // // // Dump dan hentikan eksekusi untuk memeriksa isi $parameters
+            // dd($parameters);
+
+
+            $response = Http::post(env('APP_URL') . '/oauth/token', [
+                'grant_type' => 'password',
+                'client_id' => env('PASSPORT_PASSWORD_GRANT_CLIENT_ID'),
+                'client_secret' => env('PASSPORT_PASSWORD_GRANT_CLIENT_SECRET'),
+                'username' => $request->email,
+                'password' => $request->password,
+                'scope' => '',
             ]);
 
-            // Cari user berdasarkan email
-            $user = User::where('email', $credentials['email'])->first();
+            $user['token'] = $response->json();
 
-            // Verifikasi password
-            if ($user && Hash::check($credentials['password'], $user->password)) {
-                $accessToken = $user->createToken('access_token', [TokenAbility::ACCESS_TOKEN->value], Carbon::now()->addMinutes(config('sanctum.ac_expiration')));
-                $refreshToken = $user->createToken('refresh_token', [TokenAbility::REFRESH_TOKEN->value], Carbon::now()->addMinutes(config('sanctum.rt_expiration')));
-                
-                Redis::set("access_token:{$user->id}", $accessToken->plainTextToken);
-                Redis::set("refresh_token:{$user->id}", $refreshToken->plainTextToken);
-                Redis::set("access_token_ex:{$user->id}", Carbon::now()->addMinutes(config('sanctum.ac_expiration')));
-                Redis::set("refresh_token_ex:{$user->id}", Carbon::now()->addMinutes(config('sanctum.rt_expiration')));
-
-                
-                return response()->json([
-                    'message' => 'Login successful',
-                    'access_token' => $accessToken->plainTextToken,
-                    'refresh_token' => $refreshToken->plainTextToken,
-                ]);
-            }
-
-            return response()->json(['message' => 'Invalid credentials'], 401);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'An error occurred during the login process'], 500);
+            return response()->json([
+                'success' => true,
+                'statusCode' => 200,
+                'message' => 'User has been logged successfully.',
+                'data' => $user,
+            ], 200);
+        } else {
+            return response()->json([
+                'success' => true,
+                'statusCode' => 401,
+                'message' => 'Unauthorized.',
+                'errors' => 'Unauthorized',
+            ], 401);
         }
+
     }
-    public function refreshToken(Request $request)
-{
-    $user = $request->user();
 
-    // Mencari token berdasarkan user_id dan kemampuan 'access_token'
-    PersonalAccessToken::where('tokenable_id', $user->id)
-        ->get()
-        ->each(function ($token) {
-            // Cek jika token memiliki kemampuan 'access_token'
-            if (in_array('access_token', $token->abilities)) {
-                // Hapus token jika cocok
-                $token->delete();
-            }
-        });
-
-    // Membuat token baru
-    $accessToken = $user->createToken('access_token', ['access_token'], Carbon::now()->addMinutes(config('sanctum.ac_expiration')));
-
-    // Mengembalikan response dengan token baru
-    return response(['message' => "Access Token", 'token' => $accessToken->plainTextToken]);
-}
-    
-    public function logout(Request $request)
+    /**
+     * Login user
+     *
+     * @param  LoginRequest  $request
+     */
+    public function me(): JsonResponse
     {
-        // Mendapatkan pengguna yang sedang login
-        $user = $request->user();
-    
-        // Menghapus semua token yang terkait dengan pengguna tersebut
-        $user->tokens->each(function ($token, $key) {
-            $token->delete();
-        });
-    
-        return response()->json(['message' => 'Logged out successfully'], 200);
+
+        $user = auth()->user();
+
+        return response()->json([
+            'success' => true,
+            'statusCode' => 200,
+            'message' => 'Authenticated use info.',
+            'data' => $user,
+        ], 200);
+    }
+
+    /**
+     * refresh token
+     *
+     * @return void
+     */
+    public function refreshToken(RefreshTokenRequest $request): JsonResponse
+    {
+        $response = Http::asForm()->post(env('APP_URL') . '/oauth/token', [
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $request->refresh_token,
+            'client_id' => env('PASSPORT_PASSWORD_CLIENT_ID'),
+            'client_secret' => env('PASSPORT_PASSWORD_SECRET'),
+            'scope' => '',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'statusCode' => 200,
+            'message' => 'Refreshed token.',
+            'data' => $response->json(),
+        ], 200);
+    }
+
+    /**
+     * Logout
+     */
+    public function logout(): JsonResponse
+    {
+        
+        Auth::user()->tokens()->delete();
+        return response()->json([
+            'success' => true,
+            'statusCode' => 204,
+            'message' => 'Logged out successfully.',
+        ], 204);
     }
 }

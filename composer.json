@@ -9,6 +9,7 @@
         "ichtrojan/laravel-otp": "^2.0",
         "illuminate/support": "*",
         "laravel/framework": "^11.9",
+        "laravel/passport": "^12.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
         "livewire/livewire": "^3.5",

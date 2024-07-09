@@ -42,7 +42,7 @@ public function store()
     $user = User::create([
         'name' => $validate['name'],
         'email' => $validate['user_email'],
-        'password' => Hash::make($randomPassword),
+        'password' => Hash::make('password'),
         'role' => 'customer',
     ]);
 
