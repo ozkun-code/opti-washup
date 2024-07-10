@@ -10,6 +10,9 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Request;
+use Laravel\Passport\TokenRepository;
+use Laravel\Passport\RefreshTokenRepository;
 
 class AuthController extends Controller
 {
@@ -19,7 +22,6 @@ class AuthController extends Controller
     public function register(RegisterRequest $request): JsonResponse
     {
         $userData = $request->validated();
-
         $userData['email_verified_at'] = now();
         $user = User::create($userData);
 
@@ -49,18 +51,6 @@ class AuthController extends Controller
     {
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             $user = Auth::user();
-            // $parameters = [
-            //     'grant_type' => 'password',
-            //     'client_id' => env('PASSPORT_PASSWORD_GRANT_CLIENT_ID'),
-            //     'client_secret' => env('PASSPORT_PASSWORD_GRANT_CLIENT_SECRET'),
-            //     'username' => $request->email,
-            //     'password' => $request->password,
-            //     'scope' => '',
-            // ];
-            
-            // // // Dump dan hentikan eksekusi untuk memeriksa isi $parameters
-            // dd($parameters);
-
 
             $response = Http::post(env('APP_URL') . '/oauth/token', [
                 'grant_type' => 'password',
@@ -87,31 +77,25 @@ class AuthController extends Controller
                 'errors' => 'Unauthorized',
             ], 401);
         }
-
     }
 
     /**
-     * Login user
-     *
-     * @param  LoginRequest  $request
+     * Get authenticated user info
      */
     public function me(): JsonResponse
     {
-
         $user = auth()->user();
 
         return response()->json([
             'success' => true,
             'statusCode' => 200,
-            'message' => 'Authenticated use info.',
+            'message' => 'Authenticated user info.',
             'data' => $user,
         ], 200);
     }
 
     /**
-     * refresh token
-     *
-     * @return void
+     * Refresh access token
      */
     public function refreshToken(RefreshTokenRequest $request): JsonResponse
     {
@@ -132,16 +116,30 @@ class AuthController extends Controller
     }
 
     /**
-     * Logout
+     * Logout user
      */
-    public function logout(): JsonResponse
+    public function logout(Request $request): JsonResponse
     {
-        
-        Auth::user()->tokens()->delete();
+        $request->user()->tokens->each(function ($token, $key) {
+            $this->revokeAccessAndRefreshTokens($token->id);
+        });
+
         return response()->json([
             'success' => true,
-            'statusCode' => 204,
+            'statusCode' => 200,
             'message' => 'Logged out successfully.',
-        ], 204);
+        ], 200);
+    }
+
+    /**
+     * Revoke access and refresh tokens
+     */
+    protected function revokeAccessAndRefreshTokens($tokenId)
+    {
+        $tokenRepository = app(TokenRepository::class);
+        $refreshTokenRepository = app(RefreshTokenRepository::class);
+
+        $tokenRepository->revokeAccessToken($tokenId);
+        $refreshTokenRepository->revokeRefreshTokensByAccessTokenId($tokenId);
     }
 }

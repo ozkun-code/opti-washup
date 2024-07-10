@@ -7,9 +7,5 @@
     <div class="navbar-center">
         <a href="{{ route('home') }}" class="btn btn-ghost text-xl" wire:navigate>{{ env('APP_NAME') }}</a>
     </div>
-    <div class="navbar-end">
-        <a class="btn btn-ghost btn-circle" wire:navigate>
-            <x-tabler-plus class="size-5" />
-        </a>
-    </div>
+
 </div>

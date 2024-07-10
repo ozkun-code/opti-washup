@@ -36,7 +36,7 @@
                             <div class="flex justify-center gap-1">
                                 <button class="btn btn-xs btn-square"
                                     wire:click="$dispatch('detailTransaksi', {transaksi : '{{ $transaksi->id }}'})">
-                                    <x-tabler-file class="size-4" />
+                                    <x-tabler-folder class="size-4" />
                                 </button>
                                 <button class="btn btn-xs btn-square"
                                     wire:click="$dispatch('editTransaksi', {transaksi : '{{ $transaksi->id }}' })">

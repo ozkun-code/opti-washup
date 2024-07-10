@@ -33,6 +33,7 @@
         <div class="card col-span-2 " style="max-width: 720px; max-height: 450px;">
 
             <div class="card-body" s>
+
                 {!! $chart->container() !!}
             </div>
         </div>
@@ -56,5 +57,7 @@
     </div>
 </div>
 
-<script src="{{ $chart->cdn() }}"></script>
-{{ $chart->script() }}
+@push('scripts')
+    <script src="{{ $chart->cdn() }}"></script>
+    {{ $chart->script() }}
+@endpush

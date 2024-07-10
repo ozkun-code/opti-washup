@@ -35,8 +35,7 @@ class DailyIncome
         $daysLabels = array_map(function ($day) {
             return $day + 1;
         }, range(0, $daysInMonth - 1));
-        
-      
+       
 
         return (new OriginalAreaChart)
 
